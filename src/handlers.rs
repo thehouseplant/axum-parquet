@@ -2,7 +2,6 @@ use axum::{extract::Extension, http::StatusCode, Json};
 use serde_json::json;
 use std::sync::Arc;
 
-use crate::db::DbError;
 use crate::{db::Database, models::Record};
 
 pub async fn get_records_handler(
@@ -17,7 +16,7 @@ pub async fn get_records_handler(
 pub async fn add_record_handler(
     Extension(db): Extension<Arc<Database>>,
     Json(payload): Json<Record>,
-) -> Result<(StatucCode, Json<serde_json::Value>), (StatusCode, String)> {
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
     match db.add_record(payload.clone()) {
         Ok(_) => Ok((
             StatusCode::CREATED,
