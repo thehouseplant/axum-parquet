@@ -48,4 +48,36 @@ impl Database {
         }
         Ok(())
     }
+
+    // Add a new record
+    pub fn add_record(&self, record: Record) -> Result<(), DbError> {
+        let _guard = self._lock.lock().unwrap();
+
+        let schema = Schema::new(vec![
+            Field::new("id", DataType::UInt32, false),
+            Field::new("name", DataType::Utf8, false),
+            Field::new("value", DataType::Float64, false),
+        ]);
+
+        let file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(&self.file_path)?;
+
+        let props = WriterProperties::builder().build();
+        let mut writer = ArrowWriter::try_new(file, Arc::new(schema), Some(props))?;
+
+        let batch = RecordBatch::try_new(
+            Arc::new(schema),
+            vec![
+                Arc::new(UInt32Array::from(vec![record.id])),
+                Arc::new(StringArray::from(vec![record.name])),
+                Arc::new(Float64Array::fromt(vec![record.value])),
+            ],
+        )?;
+
+        writer.write(&batch)?;
+        writer.close()?;
+        Ok(())
+    }
 }
