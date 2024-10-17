@@ -80,4 +80,41 @@ impl Database {
         writer.close()?;
         Ok(())
     }
+
+    // Retrieve all records
+    pub fn get_records(&self) -> Result<Vec<Record>, DbError> {
+        let _guard = self._lock.lock().unwrap();
+
+        let file = File::open(&self.file_path)?;
+        let reader = ParquetFileArrowReader::new(file);
+        let mut arrow_reader = reader.get_record_reader(1024)?;
+        let mut records = Vec::new();
+
+        while let Some(batch) = arrow_reader.next()? {
+            for row in 0..batch.num_rows() {
+                let id = batch
+                    .column(0)
+                    .as_any()
+                    .downcast_ref::<UInt32Array>()
+                    .unwrap()
+                    .value(row);
+                let name = batch
+                    .column(1)
+                    .as_any()
+                    .downcast_ref::<StringArray>()
+                    .unwrap()
+                    .value(row)
+                    .to_string();
+                let value = batch
+                    .column(2)
+                    .as_any()
+                    .downcast_ref::<Float64Array>()
+                    .unwrap()
+                    .value(row);
+                records.push(Record { id, name, value });
+            }
+        }
+
+        Ok(records)
+    }
 }
